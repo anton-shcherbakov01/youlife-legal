@@ -1,0 +1,64 @@
+name: Legal site
+
+# Publishes every legal document in the repository root to
+# GitHub Pages. The HTML is generated from the Markdown on every run, so the published
+# text is always the text in the repository — there is no second copy to keep in sync.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - PRIVACY_POLICY.md
+      - TERMS_OF_USE.md
+      - DELETE_ACCOUNT.md
+      - THIRD_PARTY_NOTICES.md
+      - docs/ANALYTICS_EVENTS.md
+      - LEGAL_REQUISITES.md
+      - site/**
+      - .github/workflows/pages.yml
+  workflow_dispatch:
+
+# Read the repository, write the Pages deployment, and prove the deployment's origin.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# A newer publish supersedes an older one, but never interrupts a run already deploying.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the pages
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Markdown
+        run: pip install "markdown==3.10.3"
+
+      - name: Build
+        run: python3 site/build.py
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/_site
+
+  deploy:
+    name: Deploy
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
